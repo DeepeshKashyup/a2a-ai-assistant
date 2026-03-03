@@ -1,0 +1,11 @@
+# core web framework
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+python-multipart==0.0.12
+
+# config & validations
+pydantic==2.8.2
+pydantic-settings==2.4.0
+
+# logging
+structlog==24.4.0
