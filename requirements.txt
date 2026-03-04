@@ -9,3 +9,8 @@ pydantic-settings==2.4.0
 
 # logging
 structlog==24.4.0
+
+# dev tooling
+pytest==8.3.2
+pytest-cov==5.0.0
+ruff==0.6.4

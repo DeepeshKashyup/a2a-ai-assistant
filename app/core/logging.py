@@ -1,5 +1,7 @@
 import logging
+
 import structlog
+
 
 def setup_logging(log_level: str = "INFO") -> None:
     """ Configure Stuctlog for structured JSON logging. """
@@ -23,9 +25,9 @@ def setup_logging(log_level: str = "INFO") -> None:
     )
 
     formatter = structlog.stdlib.ProcessorFormatter(
-        processor=[
-            structlog.processors.JSONRenderer(),  # Render logs as JSON,
-            structlog.stdlib.ProcessorFormatter.remove_processors_meta,  # Remove processor metadata    
+        processors=[
+            structlog.stdlib.ProcessorFormatter.remove_processors_meta,  # Remove processor metadata
+            structlog.processors.JSONRenderer(),  # Render logs as JSON
         ],
         foreign_pre_chain=shared_processors,  # Apply shared processors to stdlib logs
     )

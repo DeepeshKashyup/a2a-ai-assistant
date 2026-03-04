@@ -1,8 +1,11 @@
-from fastapi import FastAPI
-import structlog
 from contextlib import asynccontextmanager
-from app.core.logging import setup_logging
+
+import structlog
+from fastapi import FastAPI
+
 from app.core.config import settings
+from app.core.logging import setup_logging
+
 
 def fake_answer_to_everything_ml_model(x:float):
     return x*42

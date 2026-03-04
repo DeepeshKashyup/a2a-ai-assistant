@@ -1,8 +1,10 @@
 """ Application configurations loader from environment variables and .env files. """
 
+from typing import List
+
 from pydantic import Field
 from pydantic_settings import BaseSettings
-from typing import List
+
 
 class Settings(BaseSettings):
     """Central config - all values can be overridden via environment variables. """
