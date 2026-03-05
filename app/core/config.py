@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     """Central config - all values can be overridden via environment variables. """
     # -- App -----------------------------------------------------
     app_name: str = "A2A Content Assistant"
-    app_version: str = "0.1.0"
+    app_version: str = "0.1.1"
     env: str = Field(default="development", alias ="APP_ENV")
     debug: bool = False
 
