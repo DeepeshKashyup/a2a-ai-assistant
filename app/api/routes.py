@@ -1,6 +1,6 @@
 
 import structlog
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from pydantic import BaseModel
 
 logger = structlog.get_logger()
