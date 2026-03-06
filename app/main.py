@@ -5,11 +5,7 @@ from fastapi import FastAPI
 
 from app.core.config import settings
 from app.core.logging import setup_logging
-
-
-def fake_answer_to_everything_ml_model(x:float):
-    return x*42
-
+from app.api.routes import router
 
 setup_logging()
 logger = structlog.get_logger()
@@ -31,16 +27,4 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-""" @app.get("/predict/{x}")
-async def predict(x:float):
-    result = ml_model["answer to everything"](x)
-    return {"result": result}
-
-@app.get("/")
-async def root():
-    return {"message": "Hello"}
-
-
-@app.get("/items/{item_id}")
-async def read_item(item_id):
-    return {"item_id": item_id} """
+app.include_router(router, prefix="/api/v1")
