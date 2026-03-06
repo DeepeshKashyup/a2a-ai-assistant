@@ -75,21 +75,29 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Read current version and create tag
+        id: tag
+        run: |
+          FILE="app/core/config.py"
+          CURRENT=$(grep -oP '(?<=app_version: str = ")[^"]+' "$FILE")
+          echo "version=$CURRENT" >> "$GITHUB_OUTPUT"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "v$CURRENT"
+          git push origin "v$CURRENT"
+
       - name: Bump patch version in config.py
         id: bump
         run: |
           FILE="app/core/config.py"
-          CURRENT=$(grep -oP '(?<=app_version: str = ")[^"]+' "$FILE")
+          CURRENT=${{ steps.tag.outputs.version }}
           IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
           NEW="$MAJOR.$MINOR.$((PATCH + 1))"
           sed -i "s/app_version: str = \"$CURRENT\"/app_version: str = \"$NEW\"/" "$FILE"
-          echo "old=$CURRENT" >> "$GITHUB_OUTPUT"
           echo "new=$NEW" >> "$GITHUB_OUTPUT"
 
       - name: Commit and push bumped version
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
           git add app/core/config.py
-          git commit -m "chore: bump version ${{ steps.bump.outputs.old }} → ${{ steps.bump.outputs.new }} [skip ci]"
+          git commit -m "chore: bump version ${{ steps.tag.outputs.version }} → ${{ steps.bump.outputs.new }} [skip ci]"
           git push
