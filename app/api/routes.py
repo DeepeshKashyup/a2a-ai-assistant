@@ -14,6 +14,10 @@ class HealthResponse(BaseModel):
     version: str
     agent: str
 
+class VersionResponse(BaseModel):
+    """ Build info response. """
+    version: str
+
 
 # -- Routes ---------------------------------------------------
 
@@ -27,3 +31,10 @@ async def health_check() -> HealthResponse:
         version=settings.app_version,
         agent="main-agent"
     )
+
+@router.get("/version", response_model=VersionResponse, tags=["System"])
+async def version() -> VersionResponse:
+    """ Returns the build info of the main agent. """
+    from app.core.config import settings
+    logger.info("version check requested")
+    return VersionResponse(version=settings.app_version)
