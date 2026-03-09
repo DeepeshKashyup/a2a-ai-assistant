@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 
 import structlog
+import uvicorn
 from fastapi import FastAPI
 
 from app.core.config import settings
@@ -28,3 +29,6 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 app.include_router(router, prefix="/api/v1")
+
+if __name__ == "__main__":
+    uvicorn.run("app.main:app", host=settings.host, port=settings.port, reload=True)
