@@ -23,4 +23,11 @@ class Settings(BaseSettings):
     port: int = 8000
     cors_origins: List[str] = ["*"]  # Allow all origins for CORS
 
+    # -- GCP & LLM --------------------------------------------------
+    gcp_project_id: str = Field(..., env="GCP_PROJECT_ID")
+    gcp_location: str = Field('us-central1', env="GCP_LOCATION")
+    llm_model : str = Field('gemini-1.5-flash-001', env="LLM_MODEL")
+    llm_temperature: float = Field(0.7, env="LLM_TEMPERATURE")
+    llm_max_tokens: int = Field(2048, env="LLM_MAX_TOKENS")
+
 settings = Settings()
