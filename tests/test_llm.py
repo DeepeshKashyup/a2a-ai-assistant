@@ -1,4 +1,3 @@
-import asyncio
 import pytest
 from src.utils.llm_client import LLMClient
 

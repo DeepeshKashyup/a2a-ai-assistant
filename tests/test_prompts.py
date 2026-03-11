@@ -1,6 +1,4 @@
 
-from langchain_core import prompts
-import pytest
 from src.prompts.templates import PromptTemplateManager
 
 
