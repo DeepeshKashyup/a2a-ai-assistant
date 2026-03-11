@@ -3,6 +3,9 @@ import structlog
 from fastapi import APIRouter
 from pydantic import BaseModel
 
+from src.utils.llm_client import LLMClient
+from src.prompts.templates import PromptTemplateManager
+
 logger = structlog.get_logger()
 router = APIRouter()
 
@@ -18,6 +21,16 @@ class VersionResponse(BaseModel):
     """ Build info response. """
     version: str
 
+class ChatRequest(BaseModel):
+    """ Chat request schema. """
+    message: str
+    session_id: str | None = None
+
+class ChatResponse(BaseModel):
+    """ Chat response schema. """
+    reply: str
+    model: str
+    session_id: str | None = None
 
 # -- Routes ---------------------------------------------------
 
@@ -38,3 +51,18 @@ async def version() -> VersionResponse:
     from app.core.config import settings
     logger.info("version check requested")
     return VersionResponse(version=settings.app_version)
+
+_llm = LLMClient()
+_prompts = PromptTemplateManager()
+
+@router.post("/chat", response_model=ChatResponse, tags=["Chat"])
+async def chat(request: ChatRequest) -> ChatResponse:
+    """Direct chat with LLM - No Retrieval, No A2A."""
+    logger.info("chat request", message_length=len(request.message), session_id=request.session_id)
+    rendered_prompt = _prompts.render_chat(request.message)
+    reply = await _llm.generate(rendered_prompt)
+    return ChatResponse(
+        reply=reply, 
+        model=_llm.model_name, 
+        session_id=request.session_id
+    )
