@@ -30,10 +30,12 @@ async def test_version() -> None:
 @pytest.mark.asyncio
 async def test_chat() -> None:
     """ verify chat endpoint returns status 200 and expected response structure. """
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        payload = {"message": "What is the capital of France?", "session_id": "test-session"}
-        response = await client.post("api/v1/chat", json=payload)
-        
+    from unittest.mock import AsyncMock, patch
+    with patch("app.api.routes._llm.generate", new_callable=AsyncMock, return_value="Paris is the capital of France."):
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            payload = {"message": "What is the capital of France?", "session_id": "test-session"}
+            response = await client.post("api/v1/chat", json=payload)
+
     assert response.status_code == 200
     data = response.json()
     assert 'reply' in data
