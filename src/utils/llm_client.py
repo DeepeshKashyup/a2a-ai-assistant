@@ -19,6 +19,7 @@ class LLMClient:
             location = settings.gcp_location,
             temperature = settings.llm_temperature,
             max_output_tokens = settings.llm_max_tokens,
+            stream = True
         )
 
     async def generate(self, prompt: str, system: str | None = None) -> str:
