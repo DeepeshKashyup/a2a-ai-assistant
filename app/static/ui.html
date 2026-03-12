@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>A2A Test UI</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    header {
+      width: 100%;
+      max-width: 800px;
+      padding: 20px 24px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    header h1 { font-size: 1.1rem; font-weight: 600; color: #94a3b8; letter-spacing: 0.05em; }
+
+    .tabs {
+      display: flex;
+      gap: 6px;
+    }
+
+    .tab {
+      padding: 6px 16px;
+      border-radius: 6px;
+      border: 1px solid #2d3748;
+      background: transparent;
+      color: #94a3b8;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .tab.active {
+      background: #4f46e5;
+      border-color: #4f46e5;
+      color: #fff;
+    }
+
+    .chat-window {
+      flex: 1;
+      width: 100%;
+      max-width: 800px;
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .message {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-width: 85%;
+    }
+
+    .message.user { align-self: flex-end; align-items: flex-end; }
+    .message.agent { align-self: flex-start; align-items: flex-start; }
+
+    .bubble {
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 0.92rem;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .message.user .bubble {
+      background: #4f46e5;
+      color: #fff;
+      border-bottom-right-radius: 3px;
+    }
+
+    .message.agent .bubble {
+      background: #1e2433;
+      color: #e2e8f0;
+      border-bottom-left-radius: 3px;
+    }
+
+    .meta {
+      font-size: 0.72rem;
+      color: #4a5568;
+    }
+
+    .error .bubble {
+      background: #3b1f1f;
+      color: #fc8181;
+    }
+
+    .input-bar {
+      width: 100%;
+      max-width: 800px;
+      padding: 16px 24px 24px;
+      display: flex;
+      gap: 10px;
+    }
+
+    textarea {
+      flex: 1;
+      background: #1e2433;
+      border: 1px solid #2d3748;
+      border-radius: 10px;
+      color: #e2e8f0;
+      font-size: 0.92rem;
+      padding: 10px 14px;
+      resize: none;
+      outline: none;
+      line-height: 1.5;
+      height: 44px;
+      max-height: 160px;
+      transition: border-color 0.15s;
+    }
+
+    textarea:focus { border-color: #4f46e5; }
+
+    button#send {
+      background: #4f46e5;
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      padding: 0 20px;
+      font-size: 0.92rem;
+      cursor: pointer;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+
+    button#send:hover { background: #4338ca; }
+    button#send:disabled { background: #2d3748; cursor: not-allowed; }
+
+    .typing-indicator span {
+      display: inline-block;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #4a5568;
+      margin: 0 2px;
+      animation: blink 1.2s infinite;
+    }
+    .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes blink {
+      0%, 80%, 100% { opacity: 0.2; }
+      40% { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>A2A TEST UI</h1>
+  <div class="tabs">
+    <button class="tab active" data-mode="chat">Chat</button>
+    <button class="tab" data-mode="stream">Stream</button>
+  </div>
+</header>
+
+<div class="chat-window" id="chatWindow"></div>
+
+<div class="input-bar">
+  <textarea id="input" placeholder="Type a message..." rows="1"></textarea>
+  <button id="send">Send</button>
+</div>
+
+<script>
+  const SESSION_ID = crypto.randomUUID();
+  let mode = 'chat';
+
+  const chatWindow = document.getElementById('chatWindow');
+  const input = document.getElementById('input');
+  const sendBtn = document.getElementById('send');
+
+  // Tab switching
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      mode = tab.dataset.mode;
+    });
+  });
+
+  // Auto-grow textarea
+  input.addEventListener('input', () => {
+    input.style.height = '44px';
+    input.style.height = Math.min(input.scrollHeight, 160) + 'px';
+  });
+
+  // Send on Enter (Shift+Enter for newline)
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+  });
+
+  sendBtn.addEventListener('click', send);
+
+  function appendMessage(role, text, meta = '') {
+    const el = document.createElement('div');
+    el.className = `message ${role}`;
+    el.innerHTML = `
+      <div class="bubble">${escapeHtml(text)}</div>
+      ${meta ? `<div class="meta">${meta}</div>` : ''}
+    `;
+    chatWindow.appendChild(el);
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+    return el;
+  }
+
+  function appendError(text) {
+    const el = document.createElement('div');
+    el.className = 'message agent error';
+    el.innerHTML = `<div class="bubble">${escapeHtml(text)}</div>`;
+    chatWindow.appendChild(el);
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+  }
+
+  function appendTyping() {
+    const el = document.createElement('div');
+    el.className = 'message agent';
+    el.innerHTML = `<div class="bubble typing-indicator"><span></span><span></span><span></span></div>`;
+    chatWindow.appendChild(el);
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+    return el;
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  async function send() {
+    const text = input.value.trim();
+    if (!text) return;
+
+    input.value = '';
+    input.style.height = '44px';
+    sendBtn.disabled = true;
+
+    appendMessage('user', text);
+
+    if (mode === 'chat') {
+      await sendChat(text);
+    } else {
+      await sendStream(text);
+    }
+
+    sendBtn.disabled = false;
+    input.focus();
+  }
+
+  async function sendChat(message) {
+    const indicator = appendTyping();
+    try {
+      const res = await fetch('/api/v1/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message, session_id: SESSION_ID }),
+      });
+      indicator.remove();
+      if (!res.ok) {
+        appendError(`Error ${res.status}: ${res.statusText}`);
+        return;
+      }
+      const data = await res.json();
+      appendMessage('agent', data.reply, `model: ${data.model}`);
+    } catch (err) {
+      indicator.remove();
+      appendError(`Request failed: ${err.message}`);
+    }
+  }
+
+  async function sendStream(message) {
+    // Create agent bubble for streaming into
+    const el = document.createElement('div');
+    el.className = 'message agent';
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble typing-indicator';
+    bubble.innerHTML = '<span></span><span></span><span></span>';
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    el.appendChild(bubble);
+    el.appendChild(meta);
+    chatWindow.appendChild(el);
+
+    let firstToken = true;
+
+    try {
+      const res = await fetch('/api/v1/chat/stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message, session_id: SESSION_ID }),
+      });
+
+      if (!res.ok) {
+        el.remove();
+        appendError(`Error ${res.status}: ${res.statusText}`);
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          let event;
+          try { event = JSON.parse(line.slice(6)); } catch { continue; }
+
+          if (event.token) {
+            if (firstToken) {
+              bubble.classList.remove('typing-indicator');
+              bubble.innerHTML = '';
+              firstToken = false;
+            }
+            bubble.textContent += event.token;
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+          }
+
+          if (event.done) {
+            meta.textContent = `model: ${event.model}`;
+          }
+        }
+      }
+    } catch (err) {
+      el.remove();
+      appendError(`Stream failed: ${err.message}`);
+    }
+  }
+</script>
+</body>
+</html>
