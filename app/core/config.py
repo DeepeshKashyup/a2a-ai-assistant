@@ -23,6 +23,18 @@ class Settings(BaseSettings):
     port: int = 8000
     cors_origins: List[str] = ["*"]  # Allow all origins for CORS
 
+    # -- Chunking ------------------------------------------------
+    chunk_size: int = Field(1000, alias="CHUNK_SIZE")
+    chunk_overlap: int = Field(200, alias="CHUNK_OVERLAP")
+
+    # -- embedding ------------------------------------------------
+    embedding_model: str = Field('text-embedding-004', alias="EMBEDDING_MODEL")
+
+    # -- vector store ------------------------------------------------
+    chroma_persistend_dir : str = Field("data/embeddings", alias="CHROMA_PERSISTENT_DIR")
+    chroma_collection: str = Field("content_search", alias="CHROMA_COLLECTION")
+    vector_search_top_k: int = Field(5, alias="VECTOR_SEARCH_TOP_K")
+
     # -- GCP & LLM --------------------------------------------------
     gcp_project_id: str = Field(...)
     gcp_location: str = Field('us-central1')

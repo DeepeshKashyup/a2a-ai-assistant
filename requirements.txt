@@ -25,4 +25,13 @@ langchain-core==0.3.10
 langchain-google-vertexai==2.0.4
 langchain-community==0.3.2
 
+# vector store
+chromadb==0.5.15
+
+# development & packaging
 setuptools==79.0.1
+
+# document parsing
+pypdf==4.3.1
+python-docx==1.1.2
+unstructured==0.15.12
