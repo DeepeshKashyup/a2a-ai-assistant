@@ -37,16 +37,16 @@ class Message(BaseModel):
 
     @classmethod
     def user(cls, text: str) -> "Message":
-        return cls(role=MessageRole.USER, parts=[TextPart(text=text)])
+        return cls(role=MessageRole.USER, part=[TextPart(text=text)])
 
     @classmethod
     def agent(cls, text: str) -> "Message":
-        return cls(role=MessageRole.AGENT, parts=[TextPart(text=text)])
+        return cls(role=MessageRole.AGENT, part=[TextPart(text=text)])
 
     @property
     def text(self) -> str:
         """Convenience: return concatenated text of all parts."""
-        return " ".join(p.text for p in self.parts)
+        return " ".join(p.text for p in self.part)
 
 
 class TaskSendParams(BaseModel):

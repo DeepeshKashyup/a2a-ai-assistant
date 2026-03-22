@@ -1,3 +1,4 @@
+"""A2A HTTP client — used by the Main Agent to call the Search Agent."""
 
 import structlog
 import httpx

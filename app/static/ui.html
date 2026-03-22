@@ -143,6 +143,21 @@
     button#send:hover { background: #4338ca; }
     button#send:disabled { background: #2d3748; cursor: not-allowed; }
 
+    .sources {
+      margin-top: 8px;
+      font-size: 0.75rem;
+      color: #64748b;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .sources span {
+      background: #1a2235;
+      border-radius: 4px;
+      padding: 2px 8px;
+    }
+
     .typing-indicator span {
       display: inline-block;
       width: 6px; height: 6px;
@@ -167,6 +182,7 @@
   <div class="tabs">
     <button class="tab active" data-mode="chat">Chat</button>
     <button class="tab" data-mode="stream">Stream</button>
+    <button class="tab" data-mode="query">Query (RAG)</button>
   </div>
 </header>
 
@@ -252,8 +268,10 @@
 
     if (mode === 'chat') {
       await sendChat(text);
-    } else {
+    } else if (mode === 'stream') {
       await sendStream(text);
+    } else {
+      await sendQuery(text);
     }
 
     sendBtn.disabled = false;
@@ -275,6 +293,41 @@
       }
       const data = await res.json();
       appendMessage('agent', data.reply, `model: ${data.model}`);
+    } catch (err) {
+      indicator.remove();
+      appendError(`Request failed: ${err.message}`);
+    }
+  }
+
+  async function sendQuery(message) {
+    const indicator = appendTyping();
+    try {
+      const res = await fetch('/api/v1/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: message, top_k: 5, session_id: SESSION_ID }),
+      });
+      indicator.remove();
+      if (!res.ok) {
+        appendError(`Error ${res.status}: ${res.statusText}`);
+        return;
+      }
+      const data = await res.json();
+
+      const el = document.createElement('div');
+      el.className = 'message agent';
+
+      const sourcePills = data.sources.map(s =>
+        `<span>📄 ${escapeHtml(s.source_file.split('/').pop())} · ${s.score.toFixed(2)}</span>`
+      ).join('');
+
+      el.innerHTML = `
+        <div class="bubble">${escapeHtml(data.answer)}</div>
+        <div class="sources">${sourcePills}</div>
+        <div class="meta">model: ${data.model} · ${Math.round(data.latency_ms)}ms · task: ${data.task_id.slice(0,8)}</div>
+      `;
+      chatWindow.appendChild(el);
+      chatWindow.scrollTop = chatWindow.scrollHeight;
     } catch (err) {
       indicator.remove();
       appendError(`Request failed: ${err.message}`);

@@ -6,41 +6,110 @@ Main agent synthesizes answers using Gemini Flash.
 
 ## Architecture
 
-```
-User (Browser/API)
-      │
-      ▼
-┌─────────────────────────┐
-│   Main Agent  :8000     │  FastAPI — /chat, /query
-│   (Orchestrator)        │  Gemini Flash (LLM synthesis)
-└──────────┬──────────────┘
-           │  A2A Protocol (HTTP)
-           ▼
-┌─────────────────────────┐
-│  Content Search Agent   │  FastAPI — /.well-known/agent.json, /tasks
-│  :8001                  │  ChromaDB + text-embedding-004
-└─────────────────────────┘
-           │
-           ▼
-┌─────────────────────────┐
-│   ChromaDB Vector Store │  data/embeddings/
-│   In-house Documents    │  data/raw/ → data/processed/
-└─────────────────────────┘
+```mermaid
+graph TB
+    User(["👤 User"])
+
+    subgraph MainAgentService ["Main Agent Service"]
+        subgraph API ["API Layer"]
+            Router["FastAPI Router\n/chat · /chat/stream\n/health · /version"]
+            UI["Static UI\n/ui"]
+        end
+
+        subgraph Core ["Orchestration"]
+            MainAgent["MainAgent"]
+            A2AClient["A2AClient"]
+            LLMClient["LLMClient"]
+            Templates["PromptTemplateManager"]
+        end
+
+        subgraph Protocol ["A2A Protocol"]
+            Schemas["Task · Message\nAgentCard · TaskStatus"]
+        end
+    end
+
+    subgraph SearchAgentService ["Content Search Agent  (Remote HTTP)"]
+        SearchAPI["POST /tasks\nGET /.well-known/agent.json"]
+
+        subgraph RAG ["RAG Pipeline"]
+            Embedder["EmbeddingClient"]
+            VStore["VectorStore"]
+        end
+    end
+
+    subgraph GCP ["Google Cloud Platform"]
+        Gemini["Gemini LLM\nVertex AI"]
+        VertexEmbed["Vertex AI Embeddings"]
+    end
+
+    subgraph LocalStorage ["Local Storage"]
+        ChromaDB[("ChromaDB")]
+        RawDocs[("Raw Docs")]
+    end
+
+    User --> Router
+    Router --> MainAgent
+    MainAgent --> A2AClient
+    MainAgent --> LLMClient
+    MainAgent --> Templates
+    A2AClient -->|"HTTP (A2A)"| SearchAPI
+    SearchAPI --> VStore
+    VStore --> Embedder
+    LLMClient --> Gemini
+    Embedder --> VertexEmbed
+    VStore --> ChromaDB
 ```
 
-## Quick Start (Day 1)
+## Quick Start
 
 ```bash
-git clone <repo>
-cd a2a-content-assistant
+git clone https://github.com/DeepeshKashyup/a2a-ai-assistant
+cd a2a-ai-assistant
 pip install -r requirements.txt
 cp .env.example .env
 # Edit .env — set GCP_PROJECT_ID
+```
 
-make run
-# → http://localhost:8000/docs
-# → GET /api/v1/health  {"status": "ok"}
+**1. Ingest and embed your documents**
 
+Add `.txt`, `.pdf`, `.md`, or `.docx` files to `data/raw/`, then run:
+
+```bash
+make ingest   # chunk documents → data/processed/
+make seed     # embed chunks → ChromaDB (data/embeddings/)
+```
+
+**2. Start the Content Search Agent** (port 8081)
+
+```bash
+uvicorn search_agent_app.main:app --host 0.0.0.0 --port 8081 --reload
+```
+
+**3. Start the Main Agent** (port 8080)
+
+```bash
+python -m app.main
+```
+
+**4. Open the UI**
+
+```
+http://localhost:8080/ui
+```
+
+- **Chat** — direct LLM, no retrieval
+- **Stream** — streaming chat via SSE
+- **Query (RAG)** — A2A → Search Agent → Gemini, with source citations
+
+**5. Or hit the API directly**
+
+```bash
+curl -X POST http://localhost:8080/api/v1/query \
+  -H "Content-Type: application/json" \
+  -d '{"question": "your question here", "top_k": 5}'
+```
+
+```bash
 make test
 ```
 

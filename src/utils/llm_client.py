@@ -45,9 +45,9 @@ class LLMClient:
         logger.debug("llm_generate_end", model = self.model_name, response_length = len(result))
         return result
 
-"""    
+    
     async def generate_with_context(self, question: str, context: str, system: str | None = None) -> str:
-        \"\"\"Generate a response using retrieved context (for RAG use cases).
+        """Generate a response using retrieved context (for RAG use cases).
         
         Args:
             question: The user question to send to the LLM.
@@ -56,11 +56,9 @@ class LLMClient:
 
         Returns:
             The model's grounded response.
-        \"\"\"
+        """
 
         from src.prompts.templates import PromptTemplateManager
         prompts = PromptTemplateManager()
         prompt = prompts.render_rag(question=question, context=context)
         return await self.generate(prompt, system=system)
-
-"""
