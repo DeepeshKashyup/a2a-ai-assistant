@@ -42,4 +42,8 @@ class Settings(BaseSettings):
     llm_temperature: float = Field(0.7)
     llm_max_tokens: int = Field(2048)
 
+    # -- Search Agent App ------------------------------------------------
+    search_agent_port: int = Field(8081, alias="SEARCH_AGENT_PORT")
+    search_agent_url: str = Field("http://localhost:8081", alias="SEARCH_AGENT_URL")
+
 settings = Settings()
