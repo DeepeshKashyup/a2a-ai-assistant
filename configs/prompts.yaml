@@ -16,3 +16,26 @@ chat_template : |
   User question: {question}
 
   Respond helpfully and concisely.
+
+rag_template: |
+  You are answering a question using the following retrieved documents
+  from the internal knowledge base.
+
+  Retrieved Context:
+  {context}
+
+  User Question: {question}
+
+  Instructions:
+  - Base your answer primarily on the retrieved context above
+  - If the context doesn't contain enough information, say so
+  - Cite which document(s) you're drawing from
+  - Be concise and direct
+
+  Answer:
+
+few_shot_examples:
+  - input: "What is our refund policy?"
+    output: "Based on the policy document, refunds are processed within 5-7 business days..."
+  - input: "How do I reset my password?"
+    output: "According to the IT guide, you can reset your password by visiting..."
