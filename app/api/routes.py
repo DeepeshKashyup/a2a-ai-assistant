@@ -1,16 +1,18 @@
 
+import json
+
 import structlog
 from fastapi import APIRouter
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from src.utils.llm_client import LLMClient
+from src.agents.main_agent import MainAgent
 from src.prompts.templates import PromptTemplateManager
-import json
-from fastapi.responses import StreamingResponse
+from src.utils.llm_client import LLMClient
+
 logger = structlog.get_logger()
 router = APIRouter()
 
-from src.agents.main_agent import MainAgent
 _main_agent = MainAgent()
 
 # -- Schemas --------------------------------------------------
