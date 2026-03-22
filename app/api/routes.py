@@ -10,6 +10,9 @@ from fastapi.responses import StreamingResponse
 logger = structlog.get_logger()
 router = APIRouter()
 
+from src.agents.main_agent import MainAgent
+_main_agent = MainAgent()
+
 # -- Schemas --------------------------------------------------
 
 class HealthResponse(BaseModel):
@@ -32,6 +35,24 @@ class ChatResponse(BaseModel):
     reply: str
     model: str
     session_id: str | None = None
+
+class QueryResult(BaseModel):
+    """ Query result schema. """
+    question: str
+    session_id: str | None = None
+    top_k: int = 5
+
+class SourceItem(BaseModel):
+    source_file: str
+    score: float
+
+class QueryResponse(BaseModel):
+    """ Query response schema. """
+    answer: str
+    sources: list[SourceItem]
+    model: str
+    task_id: str
+    latency_ms: float
 
 # -- Routes ---------------------------------------------------
 
@@ -86,4 +107,23 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
         event_generator(), 
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "Connection": "keep-alive"},
-    ) 
+    )
+
+@router.post("/query", response_model=QueryResponse, tags=["Query"])
+async def query(request: QueryResult) -> QueryResponse:
+    """RAG-powered Q&A. Calls the content search agent via A2A protocol."""
+    logger.info("query request", question_length=len(request.question), 
+                top_k=request.top_k, session_id=request.session_id)
+    
+    result = await _main_agent.handle_query(
+        request.question, 
+        top_k=request.top_k
+    )
+    
+    return QueryResponse(
+        answer=result.get("answer", ""),
+        sources=result.get("sources", []),
+        model=result.get("model", ""),
+        task_id=result.get("task_id", ""),
+        latency_ms=result.get("latency_ms", 0.0),
+    )
