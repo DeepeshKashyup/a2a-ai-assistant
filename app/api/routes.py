@@ -7,6 +7,8 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from src.agents.main_agent import MainAgent
+from src.guardrails.input_guard import InputGuard
+from src.guardrails.output_guard import OutputGuard
 from src.prompts.templates import PromptTemplateManager
 from src.utils.llm_client import LLMClient
 
@@ -99,9 +101,6 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
         headers={"Cache-Control": "no-cache", "Connection": "keep-alive"},
     )
 
-
-from src.guardrails.input_guard import InputGuard
-from src.guardrails.output_guard import OutputGuard
 
 _input_guard = InputGuard()
 _output_guard = OutputGuard()
