@@ -46,4 +46,8 @@ class Settings(BaseSettings):
     search_agent_port: int = Field(8081, alias="SEARCH_AGENT_PORT")
     search_agent_url: str = Field("http://localhost:8081", alias="SEARCH_AGENT_URL")
 
+    # -- Guardrails ------------------------------------------------
+    max_input_length: int = Field(5000, alias="MAX_INPUT_LENGTH")
+    blocked_topics: List[str] = ["system prompt injection", "personal data exfiltration"]
+
 settings = Settings()

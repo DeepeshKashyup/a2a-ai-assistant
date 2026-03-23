@@ -7,6 +7,8 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from src.agents.main_agent import MainAgent
+from src.guardrails.input_guard import InputGuard
+from src.guardrails.output_guard import OutputGuard
 from src.prompts.templates import PromptTemplateManager
 from src.utils.llm_client import LLMClient
 
@@ -38,8 +40,8 @@ class ChatResponse(BaseModel):
     model: str
     session_id: str | None = None
 
-class QueryResult(BaseModel):
-    """ Query result schema. """
+class QueryRequest(BaseModel):
+    """ Query request schema. """
     question: str
     session_id: str | None = None
     top_k: int = 5
@@ -79,18 +81,6 @@ async def version() -> VersionResponse:
 _llm = LLMClient()
 _prompts = PromptTemplateManager()
 
-@router.post("/chat", response_model=ChatResponse, tags=["Chat"])
-async def chat(request: ChatRequest) -> ChatResponse:
-    """Direct chat with LLM - No Retrieval, No A2A."""
-    logger.info("chat request", message_length=len(request.message), session_id=request.session_id)
-    rendered_prompt = _prompts.render_chat(request.message)
-    reply = await _llm.generate(rendered_prompt)
-    return ChatResponse(
-        reply=reply, 
-        model=_llm.model_name, 
-        session_id=request.session_id
-    )
-
 @router.post("/chat/stream", tags=["Chat"])
 async def chat_stream(request: ChatRequest) -> StreamingResponse:
     """Stream chat responses from LLM - No Retrieval, No A2A."""
@@ -111,21 +101,30 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
         headers={"Cache-Control": "no-cache", "Connection": "keep-alive"},
     )
 
+
+_input_guard = InputGuard()
+_output_guard = OutputGuard()
+
+# Replace the chat endpoint above with this guarded version:
+@router.post("/chat", response_model=ChatResponse, tags=["Chat"])
+async def chat_guarded(request: ChatRequest) -> ChatResponse:
+    """Chat with input/output guardrails applied."""
+    _input_guard.validate(request.message)
+    prompt = _prompts.render_chat(question=request.message)
+    reply = await _llm.generate(prompt)
+    safe_reply = _output_guard.filter(reply)
+    return ChatResponse(reply=safe_reply, model=_llm.model_name, session_id=request.session_id)
+
+
 @router.post("/query", response_model=QueryResponse, tags=["Query"])
-async def query(request: QueryResult) -> QueryResponse:
-    """RAG-powered Q&A. Calls the content search agent via A2A protocol."""
-    logger.info("query request", question_length=len(request.question), 
-                top_k=request.top_k, session_id=request.session_id)
-    
-    result = await _main_agent.handle_query(
-        request.question, 
-        top_k=request.top_k
-    )
-    
+async def query_guarded(request: QueryRequest) -> QueryResponse:
+    """RAG query with input/output guardrails applied."""
+    _input_guard.validate(request.question)
+    result = await _main_agent.handle_query(question=request.question, top_k=request.top_k)
+    safe_answer = _output_guard.filter(result["answer"])
     return QueryResponse(
-        answer=result.get("answer", ""),
-        sources=result.get("sources", []),
-        model=result.get("model", ""),
-        task_id=result.get("task_id", ""),
-        latency_ms=result.get("latency_ms", 0.0),
+        answer=safe_answer,
+        sources=result["sources"],
+        model=result["model"],
+        task_id=result.get("task_id"),
     )
