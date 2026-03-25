@@ -2,6 +2,19 @@ import logging
 
 import structlog
 
+import uuid
+from contextvars import ContextVar
+correlation_id_var: ContextVar[str] = ContextVar("correlation_id", default="")
+
+def get_correlation_id() -> str:
+    return correlation_id_var.get() or str(uuid.uuid4())
+
+def set_correlation_id(cid: str) -> None:
+    correlation_id_var.set(cid)
+    structlog.contextvars.bind_contextvars(correlation_id=cid)
+
+def clear_correlation_id() -> None:
+    structlog.contextvars.clear_contextvars()
 
 def setup_logging(log_level: str = "INFO") -> None:
     """ Configure Stuctlog for structured JSON logging. """
