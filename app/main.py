@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from app.core.config import settings
 from app.core.logging import setup_logging
 from app.api.routes import router
+from app.middleware.error_handler import add_error_handlers
 
 STATIC_DIR = Path(__file__).parent / "static"
 
@@ -39,6 +40,8 @@ app.include_router(router, prefix="/api/v1")
 @app.get("/ui", include_in_schema=False)
 async def ui() -> FileResponse:
     return FileResponse(STATIC_DIR / "ui.html")
+
+add_error_handlers(app)
 
 if __name__ == "__main__":
     uvicorn.run("app.main:app", host=settings.host, port=settings.port, reload=True)
